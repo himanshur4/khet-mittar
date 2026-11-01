@@ -2,6 +2,11 @@
   "name": "khetmitra",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "description": "Voice-first multilingual farm advisory assistant grounded in live weather, mandi prices, soil data and official advisories.",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +15,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "probe": "node --env-file-if-exists=.env --import tsx scripts/probe/run-all.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.109",
@@ -47,9 +53,5 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
-  },
-  "description": "Voice-first multilingual farm advisory assistant grounded in live weather, mandi prices, soil data and official advisories.",
-  "engines": {
-    "node": "24.x"
   }
 }
