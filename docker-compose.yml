@@ -8,7 +8,8 @@ services:
       POSTGRES_PASSWORD: khetmitra
       POSTGRES_DB: khetmitra
     ports:
-      - "5432:5432"
+      # 5433 on the host so it never collides with a locally installed PostgreSQL on 5432.
+      - "5433:5432"
     volumes:
       - khetmitra-pg:/var/lib/postgresql/data
     healthcheck:
