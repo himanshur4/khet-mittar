@@ -38,6 +38,14 @@ describe("createPacedEmbedder", () => {
     await expect(paced.embedDocuments(docs(3))).rejects.toBeInstanceOf(DailyQuotaError);
   });
 
+  it("treats a message naming both minute and day quotas as a per-minute limit", async () => {
+    const inner = fakeEmbedder([
+      "Quota exceeded. Violations: EmbedContentRequestsPerMinutePerProject, EmbedContentRequestsPerDayPerProject. Please retry in 0.01s.",
+    ]);
+    const paced = createPacedEmbedder(inner, { perMinute: 90 });
+    expect(await paced.embedDocuments(docs(2))).toHaveLength(2);
+  });
+
   it("splits large inputs into slices and passes other errors through", async () => {
     const inner = fakeEmbedder([]);
     const paced = createPacedEmbedder(inner, { perMinute: 90 });

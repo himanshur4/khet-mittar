@@ -100,9 +100,14 @@ export function createPacedEmbedder(
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             if (!/quota|429|RESOURCE_EXHAUSTED|rate.?limit/i.test(message)) throw error;
-            if (/per.?day|PerDay/i.test(message)) {
+            // Google's 429 text can name several quotas; only stop when the per-day one is the
+            // sole limit hit. A per-minute limit always gets the wait-and-retry path.
+            const perDay = /per.?day|PerDay/i.test(message);
+            const perMinute = /per.?minute|PerMinute/i.test(message);
+            if (perDay && !perMinute) {
+              const detail = /Quota exceeded for metric[^\n]*/i.exec(message)?.[0] ?? message;
               throw new DailyQuotaError(
-                "Daily embedding quota reached. Run `npm run ingest` again tomorrow; finished documents are skipped.",
+                `Daily embedding quota reached (${detail.slice(0, 200)}). Run "npm run ingest" again tomorrow; finished documents are skipped.`,
               );
             }
             if (attempt >= (options.maxQuotaWaits ?? 6)) throw error;
