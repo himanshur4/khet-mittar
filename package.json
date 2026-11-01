@@ -21,7 +21,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "tool": "node --env-file-if-exists=.env --import tsx scripts/run-tool.ts"
+    "tool": "node --env-file-if-exists=.env --import tsx scripts/run-tool.ts",
+    "ingest": "node --env-file-if-exists=.env --import tsx scripts/ingest-advisories.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.109",

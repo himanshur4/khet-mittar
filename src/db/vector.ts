@@ -124,3 +124,13 @@ export async function countChunks(embeddingModel: string): Promise<number> {
     WHERE d.embedding_model = ${embeddingModel}`;
   return rows[0]?.n ?? 0;
 }
+
+/** Hash + embedding model of a stored document, to skip re-embedding unchanged sources. */
+export async function getDocumentMeta(
+  id: string,
+): Promise<{ contentHash: string; embeddingModel: string } | null> {
+  return getDb().advisoryDocument.findUnique({
+    where: { id },
+    select: { contentHash: true, embeddingModel: true },
+  });
+}

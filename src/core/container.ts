@@ -4,7 +4,11 @@
  */
 import { getCacheStore } from "@/db/cache-store";
 import { dbMandiRepository } from "@/db/mandi-repo";
+import { countChunks, searchChunks } from "@/db/vector";
 import { getEnv } from "./lib/env";
+import { createEmbedder } from "./rag/embed";
+import { createAdvisoryRetriever, type AdvisoryRetriever } from "./rag/retrieve";
+import { createSearchAdvisoriesTool } from "./tools/advisories";
 import { createOpenMeteoGeocoder, type GeocodingProvider } from "./tools/geocode/client";
 import { createGeocodeTool } from "./tools/geocode";
 import {
@@ -24,6 +28,7 @@ export interface Container {
   weather: WeatherProvider;
   mandi: MandiPriceProvider;
   soil: SoilProvider;
+  advisories: AdvisoryRetriever;
   tools: ToolRegistry;
 }
 
@@ -43,13 +48,27 @@ export function getContainer(): Container {
   const soil = createSoilGridsProvider(cache);
   const repo = env.DATABASE_URL ? dbMandiRepository : null;
 
+  // Created on first use: a missing LLM key then only disables advisory search, not boot.
+  let retriever: AdvisoryRetriever | undefined;
+  const getRetriever = () =>
+    (retriever ??= createAdvisoryRetriever({
+      embedder: createEmbedder(),
+      searchChunks,
+      countChunks,
+    }));
+  const advisories: AdvisoryRetriever = {
+    search: (query, options) => getRetriever().search(query, options),
+    indexedChunks: () => getRetriever().indexedChunks(),
+  };
+
   const tools = createToolRegistry([
     createGeocodeTool(geocoder),
     createWeatherTool(weather),
     createMandiTool({ provider: mandi, repo }),
     createSoilTool(soil),
+    createSearchAdvisoriesTool(advisories),
   ]);
 
-  globalForContainer.khetmitraContainer = { geocoder, weather, mandi, soil, tools };
+  globalForContainer.khetmitraContainer = { geocoder, weather, mandi, soil, advisories, tools };
   return globalForContainer.khetmitraContainer;
 }
