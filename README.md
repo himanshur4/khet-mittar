@@ -232,9 +232,11 @@ npm install                       # also runs `prisma generate`
 cp .env.example .env              # then fill in the keys
 docker compose up -d              # Postgres 17 + pgvector on localhost:5433
 npm run db:migrate                # creates tables, pgvector extension, HNSW index
-npm run ingest                    # downloads + embeds the official advisories (needs the LLM key; ~15 min on the free tier)
+npm run ingest                    # downloads + embeds the official advisories (needs the LLM key)
 npm run dev                       # http://localhost:3000
 ```
+
+**Free-tier note:** Gemini allows 1,000 embeddings a day, and the library has about 1,300 passages, so the first ingest finishes over two days: run `npm run ingest` again the next day and it continues where it stopped.
 
 The local database listens on host port **5433**, so it never collides with a PostgreSQL already installed on 5432.
 
