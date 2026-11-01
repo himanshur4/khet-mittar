@@ -8,6 +8,8 @@ import { countChunks, searchChunks } from "@/db/vector";
 import { getEnv } from "./lib/env";
 import { createEmbedder } from "./rag/embed";
 import { createAdvisoryRetriever, type AdvisoryRetriever } from "./rag/retrieve";
+import { createSarvamSpeech } from "./speech/sarvam";
+import type { SpeechProvider } from "./speech/types";
 import { createSearchAdvisoriesTool } from "./tools/advisories";
 import { createOpenMeteoGeocoder, type GeocodingProvider } from "./tools/geocode/client";
 import { createGeocodeTool } from "./tools/geocode";
@@ -29,6 +31,7 @@ export interface Container {
   mandi: MandiPriceProvider;
   soil: SoilProvider;
   advisories: AdvisoryRetriever;
+  speech: SpeechProvider;
   tools: ToolRegistry;
 }
 
@@ -69,6 +72,14 @@ export function getContainer(): Container {
     createSearchAdvisoriesTool(advisories),
   ]);
 
-  globalForContainer.khetmitraContainer = { geocoder, weather, mandi, soil, advisories, tools };
+  globalForContainer.khetmitraContainer = {
+    geocoder,
+    weather,
+    mandi,
+    soil,
+    advisories,
+    speech: createSarvamSpeech(env.SARVAM_API_KEY),
+    tools,
+  };
   return globalForContainer.khetmitraContainer;
 }

@@ -23,7 +23,6 @@ const REPLIES: Record<LanguageId, Record<"empty" | "too_long" | "no_words", stri
 
 export function checkInput(raw: string, language: LanguageId): InputCheck {
   // Control characters can't help the model and can break logs.
-  // eslint-disable-next-line no-control-regex
   const text = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim();
   if (!text) return { ok: false, reason: "empty", reply: REPLIES[language].empty };
   if (text.length > MAX_QUESTION_CHARS) {
