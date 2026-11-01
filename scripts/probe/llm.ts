@@ -69,6 +69,10 @@ export async function probeLlm(): Promise<ProbeResult[]> {
       const google = createGoogle({ apiKey: requireKey("GOOGLE_GENERATIVE_AI_API_KEY") });
       return toolCallRound(google(g.chat));
     }),
+    await probe(`Gemini tool calling, fallback model (${g.fallback})`, async () => {
+      const google = createGoogle({ apiKey: requireKey("GOOGLE_GENERATIVE_AI_API_KEY") });
+      return toolCallRound(google(g.fallback));
+    }),
     await probe(`Gemini embeddings (${g.embedding})`, async () => {
       const google = createGoogle({ apiKey: requireKey("GOOGLE_GENERATIVE_AI_API_KEY") });
       return embeddingDims(google.embedding(g.embedding), {

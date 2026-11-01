@@ -81,11 +81,15 @@ export function createDataGovMandiProvider(options: {
     filters: Record<string, string>,
     cacheKey: string,
     ttlSeconds: number,
+    paging: { limit?: number; sort?: Record<string, "asc" | "desc"> } = {},
   ) => {
     const url = new URL(`https://api.data.gov.in/resource/${resourceId}`);
     url.searchParams.set("api-key", requireKey());
     url.searchParams.set("format", "json");
-    url.searchParams.set("limit", "1000");
+    url.searchParams.set("limit", String(paging.limit ?? 1000));
+    for (const [field, order] of Object.entries(paging.sort ?? {})) {
+      url.searchParams.set(`sort[${field}]`, order);
+    }
     for (const [field, value] of Object.entries(filters)) {
       url.searchParams.set(`filters[${field}]`, value);
     }
@@ -115,8 +119,12 @@ export function createDataGovMandiProvider(options: {
       return query(
         HISTORY_RESOURCE_ID,
         { State: state, District: district, Commodity: commodity },
-        `mandi:history:${state}:${district}:${commodity}`.toLowerCase(),
+        `mandi:history:v2:${state}:${district}:${commodity}`.toLowerCase(),
         12 * 3600,
+        // Unsorted, this resource returns rows from 2010 first. Newest-first, 500 rows covered
+        // the last 30 days for Nashik onion (verified 1 Nov 2026). Field names are Title_Case;
+        // sorting on a lower-case name fails on data.gov.in's side.
+        { limit: 500, sort: { Arrival_Date: "desc" } },
       );
     },
   };

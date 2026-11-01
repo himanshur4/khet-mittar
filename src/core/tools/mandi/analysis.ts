@@ -1,4 +1,5 @@
 /** Pure functions over real price rows: ranking nearby markets and describing observed trends. */
+import { DISTRICT_RENAMES } from "@config/place-aliases";
 import type { MandiPriceRow, TrendPoint } from "./schema";
 
 export const normalizePlace = (s: string) =>
@@ -8,10 +9,25 @@ export const normalizePlace = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z]/g, "");
 
-export function sameDistrict(a: string, b: string): boolean {
+function looseEqual(a: string, b: string): boolean {
   const x = normalizePlace(a);
   const y = normalizePlace(b);
   return x.length > 0 && y.length > 0 && (x === y || x.startsWith(y) || y.startsWith(x));
+}
+
+/** The district plus any other official name for it (old/new after a rename). */
+export function districtNames(state: string, district: string): string[] {
+  const group = DISTRICT_RENAMES.find(
+    (g) => looseEqual(g.state, state) && g.names.some((n) => looseEqual(n, district)),
+  );
+  return group ? [district, ...group.names.filter((n) => !looseEqual(n, district))] : [district];
+}
+
+/** True if `name` matches any of `candidates` (spelling- and suffix-tolerant). */
+export function sameDistrict(name: string, candidates: string | readonly string[]): boolean {
+  return (typeof candidates === "string" ? [candidates] : candidates).some((c) =>
+    looseEqual(name, c),
+  );
 }
 
 export function median(values: number[]): number {
@@ -22,7 +38,10 @@ export function median(values: number[]): number {
 }
 
 /** Latest row per market, district markets first, then most recent, then by name. */
-export function rankMarkets(rows: MandiPriceRow[], district?: string): MandiPriceRow[] {
+export function rankMarkets(
+  rows: MandiPriceRow[],
+  district?: string | readonly string[],
+): MandiPriceRow[] {
   const latest = new Map<string, MandiPriceRow>();
   for (const row of rows) {
     const key = `${row.district}|${row.market}|${row.variety}`;

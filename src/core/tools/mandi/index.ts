@@ -3,7 +3,7 @@ import type { Sourced } from "@/core/lib/http";
 import { logger } from "@/core/lib/logger";
 import { istDateKey } from "@/core/lib/format";
 import { defineTool, type SourceRef } from "../types";
-import { describeTrend, rankMarkets, sameDistrict } from "./analysis";
+import { describeTrend, districtNames, rankMarkets, sameDistrict } from "./analysis";
 import type { MandiPriceProvider } from "./client";
 import { mandiArgsSchema, type MandiPriceRepository, type MandiPriceRow } from "./schema";
 
@@ -48,15 +48,22 @@ export function createMandiTool(deps: {
         },
       ];
 
+      // Renamed districts: match "Ahmednagar" (geocoder) with "Ahilyanagar" (Agmarknet).
+      const districtCandidates = district ? districtNames(state, district) : [];
+      // Query history with Agmarknet's own spelling, taken from today's rows when present.
+      const agmarknetDistrict = district
+        ? (rows.find((r) => sameDistrict(r.district, districtCandidates))?.district ?? district)
+        : undefined;
+
       if (deps.repo && rows.length > 0) {
         await deps.repo
           .save(rows, current.source, current.fetchedAt)
           .catch((err: unknown) => logger.warn("could not store mandi rows", { err }));
       }
-      if (deps.repo && district) {
+      if (deps.repo && agmarknetDistrict) {
         // History is best effort: the trend still works from rows saved on earlier days.
         try {
-          const history = await deps.provider.history(commodityName, state, district);
+          const history = await deps.provider.history(commodityName, state, agmarknetDistrict);
           if (history.data.length > 0) {
             await deps.repo.save(history.data, history.source, history.fetchedAt);
           }
@@ -70,7 +77,12 @@ export function createMandiTool(deps: {
       let points =
         deps.repo && district
           ? await deps.repo
-              .dailyMedians({ commodities: [commodityName], state, district, sinceDate: since })
+              .dailyMedians({
+                commodities: [commodityName],
+                state,
+                districts: districtCandidates,
+                sinceDate: since,
+              })
               .catch(() => [])
           : [];
       if (points.length < 2 && deps.repo) {
@@ -81,9 +93,9 @@ export function createMandiTool(deps: {
       }
       const trend = describeTrend(points);
 
-      const ranked = rankMarkets(rows, district).slice(0, MAX_MARKETS);
+      const ranked = rankMarkets(rows, districtCandidates).slice(0, MAX_MARKETS);
       const districtReports = district
-        ? ranked.filter((r) => sameDistrict(r.district, district))
+        ? ranked.filter((r) => sameDistrict(r.district, districtCandidates))
         : [];
       const latestArrivalDate = rows.reduce<string | null>(
         (max, r) => (max === null || r.arrivalDate > max ? r.arrivalDate : max),

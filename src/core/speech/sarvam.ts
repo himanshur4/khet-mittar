@@ -14,13 +14,19 @@ const PROVIDER = "Sarvam AI";
 export const SARVAM_MODELS = {
   stt: "saaras:v4",
   tts: "bulbul:v3",
-  translate: "mayura:v1",
+  /**
+   * Compared live on 1 Nov 2026: sarvam-translate (formal) gives plain Hindi and keeps "[S1]"
+   * citation markers intact; mayura "modern-colloquial" answers in Hinglish and mayura "formal"
+   * transliterates markers to "[एस1]". Mayura is kept only for "auto" source detection.
+   */
+  translate: "sarvam-translate:v1",
+  translateAuto: "mayura:v1",
 } as const;
 
 /** Bulbul v3 accepts up to 2500 characters per request. */
 export const TTS_MAX_CHARS = 2500;
-/** Mayura accepts up to 1000 characters per request. */
-const TRANSLATE_MAX_CHARS = 1000;
+/** Per-request limits: sarvam-translate 2000 characters, mayura 1000. */
+const TRANSLATE_MAX_CHARS = { translate: 2000, translateAuto: 1000 } as const;
 
 const sttResponse = z.object({
   transcript: z.string(),
@@ -112,7 +118,9 @@ export function createSarvamSpeech(apiKey: string | undefined): SpeechProvider {
     },
 
     async translate(text, { from, to }) {
-      const pieces = splitForLimit(text, TRANSLATE_MAX_CHARS);
+      const which = from === "auto" ? "translateAuto" : "translate";
+      const model = SARVAM_MODELS[which];
+      const pieces = splitForLimit(text, TRANSLATE_MAX_CHARS[which]);
       const translated: string[] = [];
       for (const piece of pieces) {
         const res = await request({
@@ -125,8 +133,8 @@ export function createSarvamSpeech(apiKey: string | undefined): SpeechProvider {
               input: piece,
               source_language_code: from === "auto" ? "auto" : LANGUAGES[from].bcp47,
               target_language_code: LANGUAGES[to].bcp47,
-              model: SARVAM_MODELS.translate,
-              mode: "modern-colloquial",
+              model,
+              mode: "formal",
             }),
           },
           timeoutMs: 12_000,
@@ -134,7 +142,7 @@ export function createSarvamSpeech(apiKey: string | undefined): SpeechProvider {
         });
         translated.push((await parse(res, translateResponse, "translate")).translated_text);
       }
-      return { text: translated.join(" "), provider: `${PROVIDER} ${SARVAM_MODELS.translate}` };
+      return { text: translated.join(" "), provider: `${PROVIDER} ${model}` };
     },
   };
 }

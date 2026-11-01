@@ -158,11 +158,11 @@ sequenceDiagram
 | Soil | [ISRIC SoilGrids v2.0](https://rest.isric.org) + the farmer's **Soil Health Card** values | SoilGrids is a beta service (it returned 503 during verification). Cached 30 days and combined with lab values from the profile when present. |
 | Advisories (RAG) | IMD [National Agromet Advisory Bulletin](https://mausam.imd.gov.in/imd_latest/contents/agromet/advisory/national_english_current.php) (current); ICAR-DWR *Wheat Cultivation in India*; PAU *Package of Practices*: Rabi, Kharif, Vegetables (crop chapters only); NIPHM *IPM Packages* for wheat, rice, onion, tomato, potato, mustard | URLs and metadata live in [`config/advisory-sources.ts`](config/advisory-sources.ts). Content is fetched by `npm run ingest`. |
 | Thresholds | IMD 24-h rainfall classes (moderate ≥15.6, heavy ≥64.5, very heavy ≥115.6 mm); IMD heat wave (≥40 °C plains baseline, ≥45 °C absolute); IMD cold wave (≤4 °C); Beaufort force 6 (≥39 km/h) | Official definitions, cited in each alert's evidence. |
-| Speech | [Sarvam AI](https://docs.sarvam.ai): Saaras v4 (STT), Bulbul v3 (TTS), Mayura v1 (translation) | Browser Web Speech API fallback. |
+| Speech | [Sarvam AI](https://docs.sarvam.ai): Saaras v4 (STT), Bulbul v3 (TTS), Sarvam-Translate v1 (translation, formal Hindi) | Browser Web Speech API fallback. |
 
 **No-mock-data guarantee.** Runtime code and seed scripts contain no datasets, sample prices, weather values or placeholder records (there is no seed script at all). Test fixtures live only in `**/__tests__/`, and an ESLint rule (`no-restricted-imports`) fails the build if runtime code imports them. When a source is down, KhetMitra shows the last **real** response labelled "cached" with its original fetch time, or says plainly that the data is unavailable.
 
-**Verification status (1 Nov 2026).** Open-Meteo, SoilGrids, the data.gov.in endpoint and all 11 advisory PDFs were checked with real calls. Sarvam, Gemini and OpenAI request formats and model IDs come from their official API references and the installed SDK types, because no keys were available during the build. Agmarknet record fields also still need confirming with a key. After adding keys, run `npm run probe`: it makes one real call to each service and prints a summary. See [`docs/PROBE_RESULTS.md`](docs/PROBE_RESULTS.md).
+**Verification status (1 Nov 2026).** Every live source was checked with real calls and real keys: Open-Meteo, data.gov.in (current and historical Agmarknet resources), Sarvam STT/TTS/translation, Gemini (model access and embeddings) and all 11 advisory PDFs. SoilGrids was returning 503 throughout, which the soil tool handles. Rerun `npm run probe` at any time; results are in [`docs/PROBE_RESULTS.md`](docs/PROBE_RESULTS.md).
 
 ## 6. Tech stack
 
@@ -258,7 +258,7 @@ curl localhost:3000/api/health    # which providers are configured / reachable
 | `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL` | Optional; changing them requires `npm run ingest -- --force` | — |
 | `DATA_GOV_IN_API_KEY` | Agmarknet mandi prices | [data.gov.in](https://data.gov.in) → sign in → My Account → API key |
 | `MANDI_RESOURCE_ID` | Optional override of the Agmarknet resource | — |
-| `SARVAM_API_KEY` | Speech-to-text, text-to-speech, translation | [dashboard.sarvam.ai](https://dashboard.sarvam.ai) |
+| `SARVAM_API_KEY` | Speech-to-text, text-to-speech, translation | [dashboard.sarvam.ai](https://dashboard.sarvam.ai) (redirects to indus.sarvam.ai) → API Keys |
 | `CRON_SECRET` | Protects the scheduled alert route (≥16 chars) | `openssl rand -hex 32` |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` | — |
 

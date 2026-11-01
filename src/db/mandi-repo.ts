@@ -23,10 +23,14 @@ export const dbMandiRepository: MandiPriceRepository = {
     });
   },
 
-  async dailyMedians({ commodities, state, district, sinceDate }) {
-    const districtFilter = district
-      ? Prisma.sql`AND ${placeMatch(Prisma.sql`district`, district)}`
-      : Prisma.empty;
+  async dailyMedians({ commodities, state, districts, sinceDate }) {
+    const districtFilter =
+      districts && districts.length > 0
+        ? Prisma.sql`AND (${Prisma.join(
+            districts.map((d) => placeMatch(Prisma.sql`district`, d)),
+            " OR ",
+          )})`
+        : Prisma.empty;
     const rows = await getDb().$queryRaw<Array<{ date: string; median: unknown; markets: number }>>`
       SELECT to_char(arrival_date, 'YYYY-MM-DD') AS date,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY modal_price) AS median,

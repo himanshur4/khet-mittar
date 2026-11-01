@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeTrend, median, rankMarkets, sameDistrict } from "../mandi/analysis";
+import { describeTrend, districtNames, median, rankMarkets, sameDistrict } from "../mandi/analysis";
 import { parseRecords, toIsoDate } from "../mandi/client";
 
 describe("parseRecords", () => {
@@ -91,6 +91,16 @@ describe("market analysis", () => {
     expect(sameDistrict("Nashik", "nashik ")).toBe(true);
     expect(sameDistrict("Ahmednagar", "Ahmed Nagar")).toBe(true);
     expect(sameDistrict("Pune", "Nashik")).toBe(false);
+  });
+
+  it("treats renamed districts as the same district, only within their state", () => {
+    const names = districtNames("Maharashtra", "Ahmednagar");
+    expect(names).toEqual(["Ahmednagar", "Ahilyanagar", "Ahmadnagar"]);
+    expect(sameDistrict("Ahilyanagar", names)).toBe(true);
+    expect(districtNames("Bihar", "Aurangabad")).toEqual(["Aurangabad"]);
+    expect(districtNames("Maharashtra", "Aurangabad District")).toContain(
+      "Chhatrapati Sambhajinagar",
+    );
   });
 
   it("lists the farmer's district first and keeps the latest row per market", () => {

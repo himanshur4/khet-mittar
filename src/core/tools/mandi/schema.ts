@@ -78,7 +78,8 @@ export interface MandiPriceRepository {
   dailyMedians(params: {
     commodities: string[];
     state: string;
-    district?: string;
+    /** Any of these names (a district plus its official former/new names). */
+    districts?: string[];
     sinceDate: string;
   }): Promise<TrendPoint[]>;
 }

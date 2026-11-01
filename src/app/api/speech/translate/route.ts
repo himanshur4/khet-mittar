@@ -13,28 +13,25 @@ const bodySchema = z.object({
   to: z.enum(LANGUAGE_IDS),
 });
 
+const MARKER = /\[S\d+(?:\s*,\s*S\d+)*\]/g;
+
 /**
  * POST /api/speech/translate { text, from, to } → { text, provider }
- * Citation markers are protected so translated answers keep their source chips.
+ * sarvam-translate keeps "[S1]" markers in place, so the text is sent as is. Any marker the
+ * translation drops is appended at the end, so the answer's source chips stay linked.
  */
 export async function POST(req: Request) {
   const body = await parseJsonBody(req, bodySchema);
   if (!body.ok) return body.response;
-  const markers: string[] = [];
-  const protectedText = body.data.text.replace(/\[S\d+(?:\s*,\s*S\d+)*\]/g, (m) => {
-    markers.push(m);
-    return `⟦${markers.length - 1}⟧`;
-  });
   try {
-    const result = await getContainer().speech.translate(protectedText, {
+    const result = await getContainer().speech.translate(body.data.text, {
       from: body.data.from,
       to: body.data.to,
     });
-    const restored = result.text.replace(
-      /⟦\s*(\d+)\s*⟧/g,
-      (_, i: string) => markers[Number(i)] ?? "",
-    );
-    return NextResponse.json({ text: restored, provider: result.provider });
+    const kept = new Set(result.text.match(MARKER) ?? []);
+    const lost = [...new Set(body.data.text.match(MARKER) ?? [])].filter((m) => !kept.has(m));
+    const text = lost.length > 0 ? `${result.text} ${lost.join(" ")}` : result.text;
+    return NextResponse.json({ text, provider: result.provider });
   } catch (error) {
     return speechFailure(error, "translation");
   }

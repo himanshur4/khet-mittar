@@ -9,21 +9,23 @@ const BASE = "https://api.sarvam.ai";
 export async function probeSarvam(): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
   results.push(
-    await probe("Sarvam translate (mayura:v1, en→hi)", async () => {
+    await probe("Sarvam translate (sarvam-translate:v1, en→hi)", async () => {
       const key = requireKey("SARVAM_API_KEY");
       const r = await http(`${BASE}/translate`, {
         method: "POST",
         headers: { "api-subscription-key": key, "content-type": "application/json" },
         body: JSON.stringify({
-          input: "Heavy rain is expected tomorrow. Postpone fertiliser application.",
+          input: "Heavy rain is expected tomorrow [S1]. Postpone fertiliser application.",
           source_language_code: "en-IN",
           target_language_code: "hi-IN",
-          model: "mayura:v1",
-          mode: "modern-colloquial",
+          model: "sarvam-translate:v1",
+          mode: "formal",
         }),
       });
       assert(r.status === 200, `HTTP ${r.status}: ${r.text.slice(0, 200)}`);
-      return `${r.ms} ms; response keys: ${Object.keys(r.json as object).join(", ")}; ${r.text.slice(0, 200)}`;
+      const translated = (r.json as { translated_text?: string }).translated_text ?? "";
+      assert(translated.includes("[S1]"), `citation marker lost: ${translated}`);
+      return `${r.ms} ms; ${translated}`;
     }),
   );
 
