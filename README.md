@@ -95,7 +95,7 @@ sequenceDiagram
   O-->>W: trace steps (tool, args, latency) stream live
   O->>L: tool results (data + source ids)
   L-->>O: Hindi answer citing [S2] [S6]
-  O->>G: every number must appear in a source; doses only from documents
+  O->>G: every number must appear in a source, and doses only from documents
   G-->>O: verified answer (+ auto-citations, removals)
   O-->>W: final answer + source chips
   W->>TTS: answer text (citation markers stripped)
