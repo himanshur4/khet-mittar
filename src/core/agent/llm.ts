@@ -21,8 +21,8 @@ export function createAiSdkClient(handle: ChatModelHandle): LlmClient {
         model: handle.model,
         system,
         messages,
-        tools: toolSet,
-        toolChoice,
+        // With no tools at all, send neither field: some providers reject a bare toolChoice.
+        ...(tools.length > 0 ? { tools: toolSet, toolChoice } : {}),
         providerOptions: handle.providerOptions,
         // One quick retry inside the SDK; model fallback is handled by the orchestrator.
         maxRetries: 1,

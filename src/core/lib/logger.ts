@@ -16,7 +16,7 @@ function threshold(): number {
   ) {
     return LEVEL_ORDER[configured];
   }
-  return process.env.NODE_ENV === "test" ? LEVEL_ORDER.warn : LEVEL_ORDER.info;
+  return process.env.NODE_ENV === "test" ? LEVEL_ORDER.error : LEVEL_ORDER.info;
 }
 
 function serializeError(error: unknown): unknown {

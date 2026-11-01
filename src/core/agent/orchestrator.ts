@@ -177,6 +177,10 @@ export async function runAgentTurn(p: RunTurnParams): Promise<TurnResult> {
     promptVersion: PROMPT_VERSION,
   });
 
+  // Hard ceiling for any single call: budget + grace for the forced final answer, so the whole
+  // turn stays inside the serverless function limit (60 s).
+  const remainingMs = () => Math.max(3_000, limits.turnBudgetMs + 10_000 - (Date.now() - started));
+
   const recordFailure = (name: string) => {
     const count = (failures.get(name) ?? 0) + 1;
     failures.set(name, count);
@@ -253,7 +257,7 @@ export async function runAgentTurn(p: RunTurnParams): Promise<TurnResult> {
     try {
       const output = await withTimeout(
         validation.run({ farmer: p.farmer, signal: p.signal }),
-        tool.timeoutMs,
+        Math.min(tool.timeoutMs, remainingMs()),
         tool.name,
       );
       const ids = output.sources.map((source) => {
@@ -334,13 +338,17 @@ export async function runAgentTurn(p: RunTurnParams): Promise<TurnResult> {
       if (p.signal?.aborted)
         throw new AppError("client disconnected", { code: "ABORTED", status: 499 });
       const outOfTime = Date.now() - started > limits.turnBudgetMs;
-      const finalStep = stepNo === limits.maxSteps - 1 || outOfTime;
-      const tools = p.tools.list().filter((t) => !disabled.has(t.name));
+      const active = p.tools.list().filter((t) => !disabled.has(t.name));
+      // Nothing left to call also means "answer now".
+      const finalStep = stepNo === limits.maxSteps - 1 || outOfTime || active.length === 0;
+      // On the answer step keep every declaration (providers reject tool-call history whose
+      // tools are undeclared) but forbid calls with toolChoice "none".
+      const tools = finalStep ? p.tools.list() : active;
       const t0 = Date.now();
       let streamed = false;
       let result: LlmStepResult;
       try {
-        const timeout = AbortSignal.timeout(limits.llmTimeoutMs);
+        const timeout = AbortSignal.timeout(Math.min(limits.llmTimeoutMs, remainingMs()));
         result = await model.step({
           system,
           messages,
