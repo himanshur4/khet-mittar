@@ -12,6 +12,18 @@ const normalize = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z]/g, "");
 
+/**
+ * GeoNames spells places with diacritics and suffixes ("Karnāl District"); Agmarknet and
+ * farmers write "Karnal". Folding here keeps district names comparable everywhere downstream.
+ */
+export function toPlainPlaceName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+(district|division|tehsil|taluka)$/i, "")
+    .trim();
+}
+
 export function createOpenMeteoGeocoder(cache: CacheStore): GeocodingProvider {
   return {
     async search(place, state) {
@@ -37,9 +49,9 @@ export function createOpenMeteoGeocoder(cache: CacheStore): GeocodingProvider {
       const places = result.data.results
         .filter((r) => (r.country_code ?? "IN") === "IN")
         .map((r): Place => ({
-          name: r.name,
-          district: r.admin2 ?? null,
-          state: r.admin1 ?? null,
+          name: toPlainPlaceName(r.name),
+          district: r.admin2 ? toPlainPlaceName(r.admin2) : null,
+          state: r.admin1 ? toPlainPlaceName(r.admin1) : null,
           latitude: r.latitude,
           longitude: r.longitude,
           population: r.population ?? null,

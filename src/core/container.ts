@@ -35,10 +35,12 @@ export interface Container {
   tools: ToolRegistry;
 }
 
-const globalForContainer = globalThis as unknown as { khetmitraContainer?: Container };
+// Module scope (not globalThis): cheap to rebuild, and dev hot-reload then picks up tool edits.
+// The expensive resource, the DB pool, has its own process-wide singleton in db/client.ts.
+let container: Container | undefined;
 
 export function getContainer(): Container {
-  if (globalForContainer.khetmitraContainer) return globalForContainer.khetmitraContainer;
+  if (container) return container;
   const env = getEnv();
   const cache = getCacheStore();
   const geocoder = createOpenMeteoGeocoder(cache);
@@ -72,7 +74,7 @@ export function getContainer(): Container {
     createSearchAdvisoriesTool(advisories),
   ]);
 
-  globalForContainer.khetmitraContainer = {
+  container = {
     geocoder,
     weather,
     mandi,
@@ -81,5 +83,5 @@ export function getContainer(): Container {
     speech: createSarvamSpeech(env.SARVAM_API_KEY),
     tools,
   };
-  return globalForContainer.khetmitraContainer;
+  return container;
 }

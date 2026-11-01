@@ -154,6 +154,7 @@ export function stopSpeaking(): void {
 export async function speak(
   text: string,
   language: LanguageId,
+  onEnd?: () => void,
 ): Promise<"server" | "browser" | "none"> {
   stopSpeaking();
   try {
@@ -166,6 +167,7 @@ export async function speak(
       const data = (await res.json()) as { audioBase64: string; mimeType: string };
       const audio = new Audio(`data:${data.mimeType};base64,${data.audioBase64}`);
       currentAudio = audio;
+      audio.onended = () => onEnd?.();
       await audio.play();
       return "server";
     }
@@ -179,6 +181,7 @@ export async function speak(
   utterance.lang = LANGUAGES[language].bcp47;
   const voice = window.speechSynthesis.getVoices().find((v) => v.lang === utterance.lang);
   if (voice) utterance.voice = voice;
+  utterance.onend = () => onEnd?.();
   window.speechSynthesis.speak(utterance);
   return "browser";
 }

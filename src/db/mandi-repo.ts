@@ -1,9 +1,12 @@
 import type { MandiPriceRepository, TrendPoint } from "@/core/tools/mandi/schema";
 import { getDb, Prisma } from "./client";
 
-/** Normalised place comparison in SQL: letters only, lower case, prefix match. */
-const placeMatch = (column: Prisma.Sql, value: string) =>
-  Prisma.sql`regexp_replace(lower(${column}), '[^a-z]', '', 'g') LIKE regexp_replace(lower(${value}), '[^a-z]', '', 'g') || '%'`;
+/** Normalised place comparison in SQL: letters only, lower case, prefix match either way. */
+const placeMatch = (column: Prisma.Sql, value: string) => {
+  const a = Prisma.sql`regexp_replace(lower(${column}), '[^a-z]', '', 'g')`;
+  const b = Prisma.sql`regexp_replace(lower(${value}), '[^a-z]', '', 'g')`;
+  return Prisma.sql`(${a} LIKE ${b} || '%' OR ${b} LIKE ${a} || '%')`;
+};
 
 export const dbMandiRepository: MandiPriceRepository = {
   async save(rows, source, fetchedAt) {

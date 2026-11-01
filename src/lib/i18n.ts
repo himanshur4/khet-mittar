@@ -1,0 +1,161 @@
+import type { LanguageId } from "@config/languages";
+
+/** UI strings. Kept short and plain so they read well for low-literacy users too. */
+const STRINGS = {
+  en: {
+    tagline: "Farm advice from live weather, mandi prices and official advisories",
+    navChat: "Ask",
+    navAlerts: "Alerts",
+    navProfile: "My farm",
+    placeholder: "Ask about your crop, weather, soil or mandi prices…",
+    send: "Send",
+    micStart: "Speak your question",
+    micStop: "Stop recording",
+    listening: "Listening… tap again to stop",
+    transcribing: "Understanding your voice…",
+    thinking: "Working on it…",
+    listen: "Listen",
+    stop: "Stop",
+    translate: "हिन्दी में देखें",
+    sources: "Sources",
+    fetched: "fetched",
+    cachedBadge: "cached",
+    noProfileHint: "Add your farm location and crops for advice tailored to your field.",
+    addProfile: "Add my farm",
+    suggestions: [
+      "Will it rain at my farm in the next 3 days? Should I irrigate?",
+      "What are today's onion prices in mandis near Nashik?",
+      "How do I control thrips in onion?",
+      "When should I give the first irrigation to wheat?",
+    ],
+    traceTitle: "Agent trace",
+    traceEmpty:
+      "Ask a question to see each step the agent takes: tools called, arguments, timing and checks.",
+    traceOpen: "Show agent steps",
+    micDenied: "Microphone permission was denied. You can still type your question.",
+    micUnavailable: "No microphone found. You can still type your question.",
+    noSpeech: "I didn't catch that. Please try again or type.",
+    voiceUnsupported: "Voice input isn't supported in this browser. Please type.",
+    voiceServerFailed: "Voice service is busy; switched to the browser's voice input.",
+    networkError: "Connection problem. Please check the internet and try again.",
+    alertsTitle: "Alerts for your crops",
+    alertsIntro:
+      "KhetMitra checks the forecast for your farm every morning and warns you before risky weather.",
+    runCheck: "Run alert check now",
+    running: "Checking forecast…",
+    noAlerts: "No alerts yet. Your farm's forecast shows no risk right now.",
+    checkSummary: (created: number, risks: number) =>
+      created > 0
+        ? `${created} new alert(s) created.`
+        : risks > 0
+          ? "No new alerts (already notified)."
+          : "No weather risk in the next 3 days.",
+    eventOn: "Expected on",
+    evidence: "Why",
+    profileTitle: "My farm",
+    name: "Your name (optional)",
+    language: "Language",
+    location: "Village / town",
+    searchPlace: "Search place",
+    searching: "Searching…",
+    noPlaces: "No place found. Try the nearest town or district name in English.",
+    crops: "Crops",
+    crop: "Crop",
+    sowingDate: "Sowing date",
+    area: "Area (acres, optional)",
+    addCrop: "Add crop",
+    remove: "Remove",
+    soilCard: "Soil Health Card values (optional)",
+    soilCardHint:
+      "Copy the values printed on your Soil Health Card. Lab values are more accurate than map estimates.",
+    testedOn: "Tested on",
+    save: "Save",
+    saving: "Saving…",
+    saved: "Saved. Your advice and alerts will use this farm.",
+    statusOk: "All systems working",
+    statusDegraded: "Some data sources unavailable",
+    statusDown: "Service problem",
+    statusUnknown: "Checking services…",
+  },
+  hi: {
+    tagline: "लाइव मौसम, मंडी भाव और सरकारी सलाह पर आधारित खेती सलाह",
+    navChat: "पूछें",
+    navAlerts: "चेतावनी",
+    navProfile: "मेरा खेत",
+    placeholder: "अपनी फसल, मौसम, मिट्टी या मंडी भाव के बारे में पूछें…",
+    send: "भेजें",
+    micStart: "बोलकर पूछें",
+    micStop: "रिकॉर्डिंग रोकें",
+    listening: "सुन रहा हूं… रोकने के लिए फिर दबाएं",
+    transcribing: "आपकी आवाज़ समझ रहा हूं…",
+    thinking: "जानकारी जुटा रहा हूं…",
+    listen: "सुनें",
+    stop: "रोकें",
+    translate: "View in English",
+    sources: "स्रोत",
+    fetched: "प्राप्त",
+    cachedBadge: "पुराना डेटा",
+    noProfileHint: "अपने खेत की जगह और फसल जोड़ें, ताकि सलाह आपके खेत के हिसाब से मिले।",
+    addProfile: "मेरा खेत जोड़ें",
+    suggestions: [
+      "अगले 3 दिन में मेरे खेत पर बारिश होगी? क्या सिंचाई करूं?",
+      "नासिक के पास की मंडियों में आज प्याज का भाव क्या है?",
+      "प्याज में थ्रिप्स कीट का नियंत्रण कैसे करें?",
+      "गेहूं में पहली सिंचाई कब करनी चाहिए?",
+    ],
+    traceTitle: "एजेंट के कदम",
+    traceEmpty:
+      "सवाल पूछें, फिर यहां देखें कि एजेंट ने कौन से टूल, किस जानकारी के साथ, कितने समय में चलाए।",
+    traceOpen: "एजेंट के कदम देखें",
+    micDenied: "माइक की अनुमति नहीं मिली। आप सवाल लिखकर पूछ सकते हैं।",
+    micUnavailable: "माइक नहीं मिला। आप सवाल लिखकर पूछ सकते हैं।",
+    noSpeech: "आवाज़ साफ़ नहीं आई। फिर से बोलें या लिखें।",
+    voiceUnsupported: "इस ब्राउज़र में बोलकर पूछना संभव नहीं है। कृपया लिखें।",
+    voiceServerFailed: "आवाज़ सेवा व्यस्त है; ब्राउज़र की आवाज़ पहचान इस्तेमाल हो रही है।",
+    networkError: "इंटरनेट में दिक्कत है। कृपया जांचें और फिर कोशिश करें।",
+    alertsTitle: "आपकी फसलों के लिए चेतावनी",
+    alertsIntro:
+      "खेतमित्र हर सुबह आपके खेत का पूर्वानुमान देखता है और खराब मौसम से पहले चेतावनी देता है।",
+    runCheck: "अभी जांच करें",
+    running: "पूर्वानुमान जांच रहा हूं…",
+    noAlerts: "अभी कोई चेतावनी नहीं। आपके खेत के पूर्वानुमान में कोई खतरा नहीं है।",
+    checkSummary: (created: number, risks: number) =>
+      created > 0
+        ? `${created} नई चेतावनी बनी।`
+        : risks > 0
+          ? "कोई नई चेतावनी नहीं (पहले ही बता दिया गया)।"
+          : "अगले 3 दिन में मौसम का कोई खतरा नहीं।",
+    eventOn: "संभावित तारीख",
+    evidence: "क्यों",
+    profileTitle: "मेरा खेत",
+    name: "आपका नाम (वैकल्पिक)",
+    language: "भाषा",
+    location: "गांव / शहर",
+    searchPlace: "जगह खोजें",
+    searching: "खोज रहा हूं…",
+    noPlaces: "जगह नहीं मिली। नज़दीकी शहर या ज़िले का नाम अंग्रेज़ी में लिखें।",
+    crops: "फसलें",
+    crop: "फसल",
+    sowingDate: "बुवाई की तारीख",
+    area: "क्षेत्र (एकड़, वैकल्पिक)",
+    addCrop: "फसल जोड़ें",
+    remove: "हटाएं",
+    soilCard: "मृदा स्वास्थ्य कार्ड के मान (वैकल्पिक)",
+    soilCardHint:
+      "अपने मृदा स्वास्थ्य कार्ड पर छपे मान लिखें। लैब के मान नक्शे के अनुमान से ज़्यादा सही होते हैं।",
+    testedOn: "जांच की तारीख",
+    save: "सहेजें",
+    saving: "सहेज रहा हूं…",
+    saved: "सहेज लिया। सलाह और चेतावनी अब इसी खेत के लिए होंगी।",
+    statusOk: "सभी सेवाएं चालू",
+    statusDegraded: "कुछ डेटा स्रोत उपलब्ध नहीं",
+    statusDown: "सेवा में समस्या",
+    statusUnknown: "सेवाएं जांच रहा हूं…",
+  },
+} satisfies Record<LanguageId, Record<string, unknown>>;
+
+export type UiStrings = (typeof STRINGS)["en"];
+
+export function strings(language: LanguageId): UiStrings {
+  return STRINGS[language];
+}
