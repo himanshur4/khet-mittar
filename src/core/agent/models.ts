@@ -1,6 +1,9 @@
 /**
  * Default model IDs per provider, verified against the providers' model catalogues and the
  * installed AI SDK on 1 Nov 2026. Override with LLM_MODEL / LLM_FALLBACK_MODEL / EMBEDDING_MODEL.
+ *
+ * Gemini primary is 3.6 Flash, not the newer 3.8 Flash: on 1 Nov 2026 3.8 returned "high demand"
+ * errors and timed out (>30 s per tool call), while 3.6 answered tool calls in 1–2 s.
  */
 import type { LlmProviderName } from "@/core/lib/env";
 
@@ -14,7 +17,7 @@ export interface ProviderModels {
 
 export const DEFAULT_MODELS: Record<LlmProviderName, ProviderModels> = {
   google: {
-    chat: "gemini-3.8-flash",
+    chat: "gemini-3.6-flash",
     fallback: "gemini-3.5-flash-lite",
     embedding: "gemini-embedding-2",
   },

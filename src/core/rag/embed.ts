@@ -25,7 +25,10 @@ function formatForModel(handle: EmbeddingModelHandle) {
   };
 }
 
-export function createEmbedder(handle: EmbeddingModelHandle = resolveEmbeddingModel()): Embedder {
+export function createEmbedder(
+  handle: EmbeddingModelHandle = resolveEmbeddingModel(),
+  options: { documentRetries?: number } = {},
+): Embedder {
   const format = formatForModel(handle);
   return {
     modelId: handle.modelId,
@@ -34,9 +37,8 @@ export function createEmbedder(handle: EmbeddingModelHandle = resolveEmbeddingMo
         model: handle.model,
         values: docs.map((d) => format.doc(d.title, d.text)),
         providerOptions: handle.providerOptions,
-        // Gentle on free-tier rate limits; the SDK retries 429s with backoff.
         maxParallelCalls: 2,
-        maxRetries: 4,
+        maxRetries: options.documentRetries ?? 4,
       });
       return embeddings;
     },
@@ -49,6 +51,70 @@ export function createEmbedder(handle: EmbeddingModelHandle = resolveEmbeddingMo
         abortSignal: AbortSignal.timeout(10_000),
       });
       return embedding;
+    },
+  };
+}
+
+/** The provider's daily embedding quota is used up; waiting minutes won't help. */
+export class DailyQuotaError extends Error {}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Paces bulk embedding under a per-minute quota. Gemini's free tier allows 100 embed requests
+ * per minute and counts each text in a batch (observed 1 Nov 2026), so a fast ingest fails
+ * after ~100 chunks. This keeps a sliding 60 s window under `perMinute` and, if the provider
+ * still says "retry in Ns", waits that long and retries the same batch.
+ */
+export function createPacedEmbedder(
+  inner: Embedder,
+  options: { perMinute: number; log?: (message: string) => void; maxQuotaWaits?: number },
+): Embedder {
+  const sent: number[] = [];
+  const slice = Math.max(1, Math.floor(options.perMinute / 3));
+
+  const reserve = async (count: number) => {
+    for (;;) {
+      const now = Date.now();
+      while (sent.length > 0 && now - sent[0]! >= 60_000) sent.shift();
+      if (sent.length + count <= options.perMinute) {
+        for (let i = 0; i < count; i++) sent.push(now);
+        return;
+      }
+      await sleep(60_000 - (now - sent[0]!) + 250);
+    }
+  };
+
+  return {
+    modelId: inner.modelId,
+    embedQuery: (query) => inner.embedQuery(query),
+    async embedDocuments(docs) {
+      const out: number[][] = [];
+      for (let i = 0; i < docs.length; i += slice) {
+        const part = docs.slice(i, i + slice);
+        for (let attempt = 0; ; attempt++) {
+          await reserve(part.length);
+          try {
+            out.push(...(await inner.embedDocuments(part)));
+            break;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (!/quota|429|RESOURCE_EXHAUSTED|rate.?limit/i.test(message)) throw error;
+            if (/per.?day|PerDay/i.test(message)) {
+              throw new DailyQuotaError(
+                "Daily embedding quota reached. Run `npm run ingest` again tomorrow; finished documents are skipped.",
+              );
+            }
+            if (attempt >= (options.maxQuotaWaits ?? 6)) throw error;
+            const seconds = Number(/retry in ([\d.]+)s/i.exec(message)?.[1] ?? 60);
+            options.log?.(
+              `  rate limit reached; waiting ${Math.ceil(seconds)} s as the provider asks…`,
+            );
+            await sleep((seconds + 1) * 1000);
+          }
+        }
+      }
+      return out;
     },
   };
 }

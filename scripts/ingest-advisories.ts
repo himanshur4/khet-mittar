@@ -8,7 +8,7 @@
 import { ADVISORY_SOURCES } from "../config/advisory-sources";
 import { describeError } from "../src/core/lib/errors";
 import { request } from "../src/core/lib/http";
-import { createEmbedder } from "../src/core/rag/embed";
+import { createEmbedder, createPacedEmbedder } from "../src/core/rag/embed";
 import { ingestSource, type IngestDeps } from "../src/core/rag/ingest";
 import { getDb } from "../src/db/client";
 import { getDocumentMeta, replaceDocument } from "../src/db/vector";
@@ -30,7 +30,14 @@ if (sources.length === 0) {
 let deps: IngestDeps;
 try {
   deps = {
-    embedder: dryRun ? null : createEmbedder(),
+    // Gemini's free tier allows 100 embedding requests a minute; 90 leaves room for the app's own
+    // queries. Retries are left to the pacer, which waits as long as the provider asks.
+    embedder: dryRun
+      ? null
+      : createPacedEmbedder(createEmbedder(undefined, { documentRetries: 0 }), {
+          perMinute: 90,
+          log: (m) => console.log(m),
+        }),
     store: dryRun ? null : { getDocumentMeta, replaceDocument },
     async fetchBytes(url) {
       const res = await request({
@@ -72,7 +79,12 @@ for (const source of sources) {
       failed++;
       console.log(`✗ ${result.id}: ${result.error}`);
   }
+  if (result.status === "failed" && result.error.startsWith("Daily embedding quota")) break;
 }
 if (!dryRun) await getDb().$disconnect();
-console.log(failed ? `${failed} source(s) failed; re-run to retry them.` : "Done.");
+console.log(
+  failed
+    ? `${failed} source(s) failed; re-run "npm run ingest" to retry them (finished ones are skipped).`
+    : "Done.",
+);
 process.exit(failed ? 1 : 0);

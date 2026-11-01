@@ -172,7 +172,7 @@ sequenceDiagram
 | App | Next.js 16.4 (App Router, Turbopack), React 19 |
 | UI | Tailwind CSS 4, shadcn/ui (Radix), lucide icons, Geist + Noto Sans Devanagari |
 | LLM transport | Vercel AI SDK 7 (`ai`, `@ai-sdk/google`, `@ai-sdk/openai`) under **our own** orchestrator |
-| Models | Gemini `gemini-3.8-flash` (primary), `gemini-3.5-flash-lite` (fallback); OpenAI `gpt-6.1-terra` / `gpt-6-luna` via `LLM_PROVIDER=openai` |
+| Models | Gemini `gemini-3.6-flash` (primary; chosen over 3.8 Flash, which was overloaded when tested), `gemini-3.5-flash-lite` (fallback); OpenAI `gpt-6.1-terra` / `gpt-6-luna` via `LLM_PROVIDER=openai` |
 | Embeddings | `gemini-embedding-2` at 768 dims (or `text-embedding-3-small` at 768) |
 | Database | PostgreSQL 17 + pgvector 0.8 (HNSW cosine index); Neon in production, Docker locally |
 | ORM | Prisma 7 (driver adapter `@prisma/adapter-pg`); vectors via `Unsupported("vector(768)")` + `$queryRaw` |
@@ -232,7 +232,7 @@ npm install                       # also runs `prisma generate`
 cp .env.example .env              # then fill in the keys
 docker compose up -d              # Postgres 17 + pgvector on localhost:5433
 npm run db:migrate                # creates tables, pgvector extension, HNSW index
-npm run ingest                    # downloads + embeds the official advisories (needs the LLM key)
+npm run ingest                    # downloads + embeds the official advisories (needs the LLM key; ~15 min on the free tier)
 npm run dev                       # http://localhost:3000
 ```
 

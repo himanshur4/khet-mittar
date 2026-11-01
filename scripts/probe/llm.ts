@@ -24,6 +24,8 @@ async function toolCallRound(model: LanguageModel): Promise<string> {
     tools: { get_weather: weatherTool },
     prompt: "Will it rain in Nashik in the next two days?",
     maxRetries: 0,
+    // The app gives one model call 25 s; anything slower is a failure for a voice assistant.
+    abortSignal: AbortSignal.timeout(30_000),
   });
   const call = result.toolCalls[0];
   assert(call, `model answered without a tool call: ${result.text.slice(0, 120)}`);
@@ -48,7 +50,14 @@ async function embeddingDims(
 }
 
 export async function probeLlm(): Promise<ProbeResult[]> {
-  const g = DEFAULT_MODELS.google;
+  // Test the models the app will actually use: .env overrides win over the built-in defaults.
+  const override = (name: string) => process.env[name]?.trim() || undefined;
+  const isGoogle = (process.env.LLM_PROVIDER?.trim() || "google") === "google";
+  const g = {
+    ...DEFAULT_MODELS.google,
+    chat: (isGoogle && override("LLM_MODEL")) || DEFAULT_MODELS.google.chat,
+    fallback: (isGoogle && override("LLM_FALLBACK_MODEL")) || DEFAULT_MODELS.google.fallback,
+  };
   const o = DEFAULT_MODELS.openai;
   return [
     await probe("Gemini model catalogue", async () => {
