@@ -20,11 +20,11 @@ import {
   MissingConfigError,
   ProviderTimeoutError,
 } from "@/core/lib/errors";
-import { truncate } from "@/core/lib/format";
+import { istDateKey, truncate } from "@/core/lib/format";
 import { logger } from "@/core/lib/logger";
 import type { FarmerContext } from "@/core/profile/types";
 import type { ToolRegistry } from "@/core/tools/registry";
-import type { Citation, RegisteredTool } from "@/core/tools/types";
+import type { Citation, RegisteredTool, SourceRef } from "@/core/tools/types";
 import { AGENT_MESSAGES } from "./messages";
 import { buildSystemPrompt, profileFacts, PROMPT_VERSION } from "./prompts/system";
 import type {
@@ -35,7 +35,6 @@ import type {
   TraceSink,
   TraceStep,
 } from "./types";
-import { istDateKey } from "@/core/lib/format";
 
 export interface AgentLimits {
   /** LLM calls per turn. 6 covers plan → 2–3 tool rounds → answer with room for one retry. */
@@ -70,6 +69,8 @@ export interface RunTurnParams {
   limits?: Partial<AgentLimits>;
   now?: Date;
   turnId?: string;
+  /** Data fetched before the turn (cited like tool results). */
+  context?: Array<{ label: string; source: SourceRef; data: unknown }>;
 }
 
 export interface TurnResult {
@@ -145,13 +146,24 @@ export async function runAgentTurn(p: RunTurnParams): Promise<TurnResult> {
   };
 
   const system = buildSystemPrompt({ farmer: p.farmer, language: p.language, now: p.now });
-  const messages: ModelMessage[] = [...p.history, { role: "user", content: p.question }];
   const citations: Citation[] = [];
   const evidence: EvidenceItem[] = profileFacts(p.farmer, istDateKey(p.now)).map((text) => ({
     citationId: null,
     kind: "profile",
     text,
   }));
+  // Pre-fetched data (e.g. the forecast that triggered an alert) gets citation ids up front.
+  const contextLines = (p.context ?? []).map((c) => {
+    const id = `S${citations.length + 1}`;
+    citations.push({ ...c.source, id });
+    evidence.push({ citationId: id, kind: c.source.kind, text: JSON.stringify(c.data) });
+    return `[${id}] ${c.label}: ${JSON.stringify(c.data)}`;
+  });
+  const question =
+    contextLines.length > 0
+      ? `${p.question}\n\nData already fetched for you (cite it with its id):\n${contextLines.join("\n")}`
+      : p.question;
+  const messages: ModelMessage[] = [...p.history, { role: "user", content: question }];
   const failures = new Map<string, number>();
   const disabled = new Map<string, string>();
   let model = p.models.primary;
